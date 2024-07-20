@@ -83,9 +83,9 @@
             padding: 20px;
             border: 1px solid #888;
             width: 80%;
-            max-width: 500px;
-            text-align: center;
+            max-width: 800px;
             border-radius: 5px;
+            position: relative;
         }
 
         .close {
@@ -103,21 +103,41 @@
             cursor: pointer;
         }
 
-        .modal-image {
-            max-width: 100%;
-            height: auto;
-        }
-
-        .player-results {
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #ddd;
-        }
-
         #map {
             width: 100%;
             height: 400px; /* Ajuster la hauteur de la carte */
             margin: auto;
+            background: url('placeholder.jpg') no-repeat center center;
+            background-size: cover;
+        }
+
+        #satelliteMap {
+            width: 100%;
+            height: 500px; /* Ajuster la hauteur de la carte dans la modale */
+        }
+
+        /* Loader */
+        .loader {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            border: 16px solid #f3f3f3; /* Light grey */
+            border-top: 16px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            animation: spin 2s linear infinite;
+            z-index: 1000; /* Ensure the loader is above the map */
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loader.hidden {
+            display: none;
         }
     </style>
 </head>
@@ -141,6 +161,7 @@
         <!-- Section de présentation du trou -->
         <div id="holePresentationStep" style="display:none;">
             <h2>Trou <span id="holeNumber"></span></h2>
+            <button id="satelliteViewButton">Vue Satellite</button>
             <div id="map"></div>
             <div id="holeInfos"></div>
             <button id="startHoleButton">Commencer le trou</button>
@@ -153,7 +174,15 @@
             <button id="nextHoleButton">Enregistrer et Passer au Trou Suivant</button>
         </div>
 
-        <!-- Modale -->
+        <!-- Modale pour la vue satellite -->
+        <div id="satelliteModal" class="modal">
+            <div class="modal-content">
+                <span class="close" id="satelliteClose">&times;</span>
+                <div id="satelliteMap"></div>
+            </div>
+        </div>
+
+        <!-- Modale pour l'image de transition -->
         <div id="modal" class="modal">
             <div class="modal-content">
                 <span class="close">&times;</span>
@@ -171,7 +200,10 @@
             const holePresentationStep = document.getElementById('holePresentationStep');
             const scoreStep = document.getElementById('scoreStep');
             const modal = document.getElementById('modal');
+            const satelliteModal = document.getElementById('satelliteModal');
             const closeModal = document.querySelector('.close');
+            const closeSatelliteModal = document.getElementById('satelliteClose');
+            const satelliteMapEl = document.getElementById('satelliteMap');
 
             const holeNumberEl = document.getElementById('holeNumber');
             const holeInfosEl = document.getElementById('holeInfos');
@@ -180,6 +212,7 @@
             const scoreFormsContainer = document.getElementById('scoreForms');
             const nextHoleButton = document.getElementById('nextHoleButton');
 
+            const satelliteViewButton = document.getElementById('satelliteViewButton');
             let playersData = [];
             let currentHole = 0;
             const totalHoles = 3; // Nombre de trous (pour test simplifié)
@@ -205,19 +238,19 @@
             });
 
             registerPlayersButton.addEventListener('click', () => {
-                const playerForms = document.querySelectorAll('.playerForm');
+                const playerForms = document.querySelectorAll('#playerForms .playerForm');
                 playersData = [];
-
                 for (let i = 0; i < playerForms.length; i++) {
                     const name = playerForms[i].querySelector(`input[id^='name']`).value;
                     const index = playerForms[i].querySelector(`input[id^='index']`).value;
-
                     if (name && index) {
-                        playersData.push({ name: name, index: index, scores: [] });
-                    } else {
-                        alert('Veuillez remplir tous les champs pour chaque joueur.');
-                        return;
+                        playersData.push({ name, index, scores: [] });
                     }
+                }
+
+                if (playersData.length === 0) {
+                    alert('Veuillez ajouter au moins un joueur.');
+                    return;
                 }
 
                 playerFormStep.style.display = 'none';
@@ -235,11 +268,12 @@
                 const scoreInputs = document.querySelectorAll('#scoreForms input');
                 let allScoresEntered = true;
 
-                scoreInputs.forEach((input, index) => {
-                    if (input.value === '') {
-                        allScoresEntered = false;
+                playersData.forEach((player, index) => {
+                    const score = scoreInputs[index].value;
+                    if (score !== '') {
+                        player.scores.push(score);
                     } else {
-                        playersData[index].scores.push(input.value);
+                        allScoresEntered = false;
                     }
                 });
 
@@ -263,6 +297,29 @@
                 }
             });
 
+            closeSatelliteModal.addEventListener('click', () => {
+                satelliteModal.style.display = 'none';
+            });
+
+            satelliteViewButton.addEventListener('click', () => {
+                satelliteModal.style.display = 'block';
+
+                // Initialiser la carte Leaflet dans la modale
+                const satelliteMap = L.map('satelliteMap', {
+                    center: holes[currentHole].center,
+                    zoom: 17
+                });
+
+                L.tileLayer('https://api.tomtom.com/map/1/tile/sat/main/{z}/{x}/{y}.jpg?key=PI1Ru8ymjK0WhxPAccrLofhaq0BIb77T', {
+                    maxZoom: 19,
+                    attribution: '&copy; <a href="https://tomtom.com">TomTom</a>'
+                }).addTo(satelliteMap);
+
+                L.marker(holes[currentHole].center).addTo(satelliteMap)
+                    .bindPopup('Trou ' + (currentHole + 1))
+                    .openPopup();
+            });
+
             function generateScoreForms() {
                 scoreFormsContainer.innerHTML = '';
                 playersData.forEach(player => {
@@ -284,14 +341,9 @@
                 const hole = holes[currentHole];
                 holeNumberEl.textContent = currentHole + 1;
 
-                const map = L.map('map').setView(hole.center, 17); // Zoom niveau 17
-                L.tileLayer('https://api.tomtom.com/map/1/tile/sat/main/{z}/{x}/{y}.jpg?key=PI1Ru8ymjK0WhxPAccrLofhaq0BIb77T', {
-                    maxZoom: 19,
-                    attribution: '&copy; <a href="https://tomtom.com">TomTom</a>'
-                }).addTo(map);
-                L.marker(hole.center).addTo(map)
-                    .bindPopup('Trou ' + (currentHole + 1))
-                    .openPopup();
+                // Remplacer la carte Leaflet par une image de transition
+                document.getElementById('map').style.background = 'url("transition.jpg") no-repeat center center';
+                document.getElementById('map').style.backgroundSize = 'cover';
 
                 holeInfosEl.innerHTML = '';
                 playersData.forEach(player => {
