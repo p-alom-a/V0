@@ -318,6 +318,22 @@
                 L.marker(holes[currentHole].center).addTo(satelliteMap)
                     .bindPopup('Trou ' + (currentHole + 1))
                     .openPopup();
+
+                // Ajouter la géolocalisation
+                satelliteMap.locate({ setView: true, maxZoom: 17 });
+
+                function onLocationFound(e) {
+                    var radius = e.accuracy / 2;
+                   
+                    L.circle(e.latlng, radius).addTo(satelliteMap);
+                }
+
+                function onLocationError(e) {
+                    alert(e.message);
+                }
+
+                satelliteMap.on('locationfound', onLocationFound);
+                satelliteMap.on('locationerror', onLocationError);
             });
 
             function generateScoreForms() {
