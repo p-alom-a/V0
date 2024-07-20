@@ -185,7 +185,7 @@
         <!-- Modale pour l'image de transition -->
         <div id="modal" class="modal">
             <div class="modal-content">
-                <span class="close">&times;</span>
+                <span class="close" id="transitionClose">&times;</span>
                 <img src="transition.jpg" alt="Image de transition" class="modal-image">
             </div>
         </div>
@@ -201,7 +201,7 @@
             const scoreStep = document.getElementById('scoreStep');
             const modal = document.getElementById('modal');
             const satelliteModal = document.getElementById('satelliteModal');
-            const closeModal = document.querySelector('.close');
+            const closeModal = document.getElementById('transitionClose');
             const closeSatelliteModal = document.getElementById('satelliteClose');
             const satelliteMapEl = document.getElementById('satelliteMap');
 
