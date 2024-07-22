@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Golf App</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+   
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -191,8 +193,20 @@
         </div>
     </div>
 
+
+
+
+
+
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  
     <script>
+        (function() {
+            emailjs.init("bNLINAH9U9QfeBPG3");
+        })();
+    
         document.addEventListener('DOMContentLoaded', () => {
             const addPlayerButton = document.getElementById('addPlayerButton');
             const registerPlayersButton = document.getElementById('registerPlayersButton');
@@ -204,14 +218,14 @@
             const closeModal = document.getElementById('transitionClose');
             const closeSatelliteModal = document.getElementById('satelliteClose');
             const satelliteMapEl = document.getElementById('satelliteMap');
-
+    
             const holeNumberEl = document.getElementById('holeNumber');
             const holeInfosEl = document.getElementById('holeInfos');
             const startHoleButton = document.getElementById('startHoleButton');
             const currentHoleNumberEl = document.getElementById('currentHoleNumber');
             const scoreFormsContainer = document.getElementById('scoreForms');
             const nextHoleButton = document.getElementById('nextHoleButton');
-
+    
             const satelliteViewButton = document.getElementById('satelliteViewButton');
             let playersData = [];
             let currentHole = 0;
@@ -222,7 +236,7 @@
                 { par: 5, distance: { 1: '450m', 2: '470m', 3: '490m' }, center: [48.56381, 2.50325] },
                 // Ajoutez d'autres trous avec leurs coordonnées
             ];
-
+    
             addPlayerButton.addEventListener('click', () => {
                 const playerForms = document.getElementById('playerForms');
                 const playerCount = playerForms.children.length + 1;
@@ -236,7 +250,7 @@
                 `;
                 playerForms.appendChild(playerForm);
             });
-
+    
             registerPlayersButton.addEventListener('click', () => {
                 const playerForms = document.querySelectorAll('#playerForms .playerForm');
                 playersData = [];
@@ -247,27 +261,27 @@
                         playersData.push({ name, index, scores: [] });
                     }
                 }
-
+    
                 if (playersData.length === 0) {
                     alert('Veuillez ajouter au moins un joueur.');
                     return;
                 }
-
+    
                 playerFormStep.style.display = 'none';
                 showHolePresentation();
             });
-
+    
             startHoleButton.addEventListener('click', () => {
                 holePresentationStep.style.display = 'none';
                 scoreStep.style.display = 'block';
                 currentHoleNumberEl.textContent = currentHole + 1;
                 generateScoreForms();
             });
-
+    
             nextHoleButton.addEventListener('click', () => {
                 const scoreInputs = document.querySelectorAll('#scoreForms input');
                 let allScoresEntered = true;
-
+    
                 playersData.forEach((player, index) => {
                     const score = scoreInputs[index].value;
                     if (score !== '') {
@@ -276,12 +290,12 @@
                         allScoresEntered = false;
                     }
                 });
-
+    
                 if (!allScoresEntered) {
                     alert('Veuillez entrer un score pour chaque joueur.');
                     return;
                 }
-
+    
                 currentHole++;
                 if (currentHole < totalHoles) {
                     showModal();
@@ -289,53 +303,52 @@
                     displayResults();
                 }
             });
-
+    
             closeModal.addEventListener('click', () => {
                 modal.style.display = 'none';
                 if (currentHole < totalHoles) {
                     showHolePresentation();
                 }
             });
-
+    
             closeSatelliteModal.addEventListener('click', () => {
                 satelliteModal.style.display = 'none';
             });
-
+    
             satelliteViewButton.addEventListener('click', () => {
                 satelliteModal.style.display = 'block';
-
+    
                 // Initialiser la carte Leaflet dans la modale
                 const satelliteMap = L.map('satelliteMap', {
                     center: holes[currentHole].center,
                     zoom: 17
                 });
-
+    
                 L.tileLayer('https://api.tomtom.com/map/1/tile/sat/main/{z}/{x}/{y}.jpg?key=PI1Ru8ymjK0WhxPAccrLofhaq0BIb77T', {
                     maxZoom: 19,
                     attribution: '&copy; <a href="https://tomtom.com">TomTom</a>'
                 }).addTo(satelliteMap);
-
+    
                 L.marker(holes[currentHole].center).addTo(satelliteMap)
                     .bindPopup('Trou ' + (currentHole + 1))
                     .openPopup();
-
+    
                 // Ajouter la géolocalisation
                 satelliteMap.locate({ setView: true, maxZoom: 17 });
-
+    
                 function onLocationFound(e) {
                     var radius = e.accuracy / 2;
-                   
                     L.circle(e.latlng, radius).addTo(satelliteMap);
                 }
-
+    
                 function onLocationError(e) {
                     alert(e.message);
                 }
-
+    
                 satelliteMap.on('locationfound', onLocationFound);
                 satelliteMap.on('locationerror', onLocationError);
             });
-
+    
             function generateScoreForms() {
                 scoreFormsContainer.innerHTML = '';
                 playersData.forEach(player => {
@@ -348,45 +361,76 @@
                     scoreFormsContainer.appendChild(scoreForm);
                 });
             }
-
+    
             function showModal() {
                 modal.style.display = 'block';
             }
-
+    
             function showHolePresentation() {
                 const hole = holes[currentHole];
                 holeNumberEl.textContent = currentHole + 1;
-
+    
                 // Remplacer la carte Leaflet par une image de transition
                 document.getElementById('map').style.background = 'url("transition.jpg") no-repeat center center';
                 document.getElementById('map').style.backgroundSize = 'cover';
-
+    
                 holeInfosEl.innerHTML = '';
                 playersData.forEach(player => {
                     const holeInfo = document.createElement('div');
                     holeInfo.innerHTML = `Distance pour index ${player.index}: ${hole.distance[player.index]}`;
                     holeInfosEl.appendChild(holeInfo);
                 });
-
+    
                 scoreStep.style.display = 'none'; // Masquer la section de score
                 holePresentationStep.style.display = 'block';
             }
-
+    
             function displayResults() {
                 scoreStep.style.display = 'none';
+    
+                // Création de la div pour les résultats
                 const resultStep = document.createElement('div');
                 resultStep.className = 'container'; // Appliquer les mêmes styles à la div des résultats
                 resultStep.innerHTML = '<h2>Résultats</h2>';
+    
                 playersData.forEach(player => {
                     resultStep.innerHTML += `<div class="player-results">
                         <p><strong>Nom: ${player.name}</strong></p>
                         ${player.scores.map((score, index) => `<p>Score du trou ${index + 1}: ${score}</p>`).join('')}
                     </div>`;
                 });
+    
+                // Ajouter le bouton "Envoyer les résultats"
+                const sendResultsButton = document.createElement('button');
+                sendResultsButton.textContent = 'Envoyer les résultats';
+                sendResultsButton.id = 'sendResultsButton';
+                resultStep.appendChild(sendResultsButton);
+    
                 document.body.innerHTML = ''; // Vider le body pour supprimer la div container initiale
                 document.body.appendChild(resultStep);
+    
+                // Ajouter l'événement pour le bouton
+                sendResultsButton.addEventListener('click', sendResults);
+            }
+    
+            function sendResults() {
+                const results = playersData.map(player => {
+                    return `Nom: ${player.name}\n${player.scores.map((score, index) => `Score du trou ${index + 1}: ${score}`).join('\n')}`;
+                }).join('\n\n');
+    
+                // Configurez l'envoi des emails via EmailJS
+                emailjs.send('service_vkyjis8', 'template_yzyr9hy', {
+                    results: results
+                })
+                .then((response) => {
+                    alert('Les résultats ont été envoyés avec succès !');
+                }, (error) => {
+                    alert('Erreur lors de l\'envoi des résultats : ' + JSON.stringify(error));
+                });
             }
         });
     </script>
+    
+    
 </body>
 </html>
