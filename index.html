@@ -198,10 +198,10 @@
 
 
 
-
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.2/dist/signature_pad.umd.min.js"></script>
+    
     <script>
         (function() {
             emailjs.init("bNLINAH9U9QfeBPG3");
@@ -400,6 +400,19 @@
                     </div>`;
                 });
     
+                // Ajouter le pad de signature
+                const signatureContainer = document.createElement('div');
+                signatureContainer.style.border = '1px solid #ddd';
+                signatureContainer.style.borderRadius = '4px';
+                signatureContainer.style.marginTop = '10px';
+                signatureContainer.style.marginBottom = '10px';
+                signatureContainer.innerHTML = `
+                    <p>Signature:</p>
+                    <canvas id="signature-pad" width="600" height="200" style="border:1px solid #000;"></canvas>
+                    <button id="clear-signature">Effacer la signature</button>
+                `;
+                resultStep.appendChild(signatureContainer);
+    
                 // Ajouter le bouton "Envoyer les résultats"
                 const sendResultsButton = document.createElement('button');
                 sendResultsButton.textContent = 'Envoyer les résultats';
@@ -409,30 +422,47 @@
                 document.body.innerHTML = ''; // Vider le body pour supprimer la div container initiale
                 document.body.appendChild(resultStep);
     
+                // Initialiser le pad de signature
+                const canvas = document.getElementById('signature-pad');
+                const signaturePad = new SignaturePad(canvas);
+    
+                document.getElementById('clear-signature').addEventListener('click', () => {
+                    signaturePad.clear();
+                });
+    
                 // Ajouter l'événement pour le bouton
-                sendResultsButton.addEventListener('click', sendResults);
+                sendResultsButton.addEventListener('click', () => sendResults(signaturePad));
             }
     
-            function sendResults() {
-    const results = playersData.map(player => {
-        return `Nom: ${player.name}\n${player.scores.map((score, index) => `Score du trou ${index + 1}: ${score}`).join('\n')}`;
-    }).join('\n\n');
-
-    const playerNames = playersData.map(player => player.name).join(', ');
-
-    // Configurez l'envoi des emails via EmailJS
-    emailjs.send('service_vkyjis8', 'template_yzyr9hy', {
-        results: results,
-        playerNames: playerNames
-    })
-    .then((response) => {
-        alert('Les résultats ont été envoyés avec succès !');
-    }, (error) => {
-        alert('Erreur lors de l\'envoi des résultats : ' + JSON.stringify(error));
-    });
-}
+            function sendResults(signaturePad) {
+                if (signaturePad.isEmpty()) {
+                    alert('Veuillez signer avant d\'envoyer les résultats.');
+                    return;
+                }
+    
+                const results = playersData.map(player => {
+                    return `Nom: ${player.name}\n${player.scores.map((score, index) => `Score du trou ${index + 1}: ${score}`).join('\n')}`;
+                }).join('\n\n');
+    
+                const playerNames = playersData.map(player => player.name).join(', ');
+    
+                const signatureDataUrl = signaturePad.toDataURL();
+    
+                // Configurez l'envoi des emails via EmailJS
+                emailjs.send('service_vkyjis8', 'template_yzyr9hy', {
+                    results: results,
+                    playerNames: playerNames,
+                    signature: signatureDataUrl
+                })
+                .then((response) => {
+                    alert('Les résultats ont été envoyés avec succès !');
+                }, (error) => {
+                    alert('Erreur lors de l\'envoi des résultats : ' + JSON.stringify(error));
+                });
+            }
         });
     </script>
+    
     
     
 </body>
