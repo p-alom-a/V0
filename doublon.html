@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golf App</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+   
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 10px 15px;
+            background-color: #5cb85c;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #4cae4c;
+        }
+
+        .add-player {
+            background-color: #337ab7;
+            margin-bottom: 10px;
+        }
+
+        .add-player:hover {
+            background-color: #286090;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 800px;
+            border-radius: 5px;
+            position: relative;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #000;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        #map {
+            width: 100%;
+            height: 400px; /* Ajuster la hauteur de la carte */
+            margin: auto;
+            background: url('./image/illu.jpg') no-repeat center center;
+            background-size: cover;
+        }
+
+        #satelliteMap {
+            width: 100%;
+            height: 500px; /* Ajuster la hauteur de la carte dans la modale */
+        }
+
+        /* Loader */
+        .loader {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            border: 16px solid #f3f3f3; /* Light grey */
+            border-top: 16px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            animation: spin 2s linear infinite;
+            z-index: 1000; /* Ensure the loader is above the map */
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loader.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Formulaire d'enregistrement des joueurs -->
+        <div id="playerFormStep">
+            <h2>Enregistrer des joueurs</h2>
+            <div id="playerForms">
+                <div class="playerForm">
+                    <label for="name1">Nom:</label>
+                    <input type="text" id="name1" name="name1" required>
+                    <label for="color1">Couleur de départ:</label>
+                    <select id="color1" name="color1" required>
+                        <option value="jaune">Jaune</option>
+                        <option value="blanc">Blanc</option>
+                        <option value="noir">Noir</option>
+                        <option value="bleu">Bleu</option>
+                        <option value="rouge">Rouge</option>
+                    </select>
+                </div>
+            </div>
+            <button id="addPlayerButton" class="add-player">Ajouter un joueur</button>
+            <button id="registerPlayersButton">Enregistrer les joueurs</button>
+        </div>
+
+        <!-- Section de présentation du trou -->
+        <div id="holePresentationStep" style="display:none;">
+            <h2>Trou <span id="holeNumber"></span></h2>
+            <button id="satelliteViewButton">Vue Satellite</button>
+            <div id="map">
+                <!-- <img src="./image/illu.jpg" alt=""> -->
+            </div>
+            <div id="holeInfos"></div>
+            <button id="startHoleButton">Commencer le trou</button>
+        </div>
+
+        <!-- Section d'enregistrement du score -->
+        <div id="scoreStep" style="display:none;">
+            <h2>Enregistrer les scores pour le trou <span id="currentHoleNumber"></span></h2>
+            <div id="scoreForms"></div>
+            <button id="nextHoleButton">Enregistrer et Passer au Trou Suivant</button>
+        </div>
+
+        <!-- Modale pour la vue satellite -->
+        <div id="satelliteModal" class="modal">
+            <div class="modal-content">
+                <span class="close" id="satelliteClose">&times;</span>
+                <div id="satelliteMap"></div>
+            </div>
+        </div>
+
+        <!-- Modale pour l'image de transition -->
+        <div id="modal" class="modal">
+            <div class="modal-content">
+                <span class="close" id="transitionClose">&times;</span>
+                <img src="transition.jpg" alt="Image de transition" class="modal-image">
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.2/dist/signature_pad.umd.min.js"></script>
+    
+    <script>
+        (function() {
+            emailjs.init("bNLINAH9U9QfeBPG3");
+        })();
+    
+        document.addEventListener('DOMContentLoaded', () => {
+            const addPlayerButton = document.getElementById('addPlayerButton');
+            const registerPlayersButton = document.getElementById('registerPlayersButton');
+            const playerFormStep = document.getElementById('playerFormStep');
+            const holePresentationStep = document.getElementById('holePresentationStep');
+            const scoreStep = document.getElementById('scoreStep');
+            const modal = document.getElementById('modal');
+            const satelliteModal = document.getElementById('satelliteModal');
+            const closeModal = document.getElementById('transitionClose');
+            const closeSatelliteModal = document.getElementById('satelliteClose');
+            const satelliteMapEl = document.getElementById('satelliteMap');
+    
+            const holeNumberEl = document.getElementById('holeNumber');
+            const holeInfosEl = document.getElementById('holeInfos');
+            const startHoleButton = document.getElementById('startHoleButton');
+            const currentHoleNumberEl = document.getElementById('currentHoleNumber');
+            const scoreFormsContainer = document.getElementById('scoreForms');
+            const nextHoleButton = document.getElementById('nextHoleButton');
+    
+            const satelliteViewButton = document.getElementById('satelliteViewButton');
+            let playersData = [];
+        let currentHole = 0;
+        const totalHoles = 18; 
+        const holes = [
+    { trou: 1, distances: { jaune: '347m', blanc: '358m', noir: '326m', bleu: '297m', rouge: '272m' }, center: [48.56381, 2.50325] },
+    { trou: 2, distances: { jaune: '319m', blanc: '330m', noir: '310m', bleu: '304m', rouge: '290m' }, center: [48.56382, 2.50326] },
+    { trou: 3, distances: { jaune: '120m', blanc: '134m', noir: '134m', bleu: '111m', rouge: '104m' }, center: [48.56383, 2.50327] },
+    { trou: 4, distances: { jaune: '433m', blanc: '444m', noir: '444m', bleu: '424m', rouge: '416m' }, center: [48.56384, 2.50328] },
+    { trou: 5, distances: { jaune: '377m', blanc: '398m', noir: '398m', bleu: '342m', rouge: '342m' }, center: [48.56385, 2.50329] },
+    { trou: 6, distances: { jaune: '274m', blanc: '290m', noir: '290m', bleu: '246m', rouge: '240m' }, center: [48.56386, 2.50330] },
+    { trou: 7, distances: { jaune: '304m', blanc: '315m', noir: '315m', bleu: '286m', rouge: '277m' }, center: [48.56387, 2.50331] },
+    { trou: 8, distances: { jaune: '442m', blanc: '498m', noir: '498m', bleu: '405m', rouge: '399m' }, center: [48.56388, 2.50332] },
+    { trou: 9, distances: { jaune: '157m', blanc: '166m', noir: '166m', bleu: '150m', rouge: '144m' }, center: [48.56389, 2.50333] },
+    { trou: 10, distances: { jaune: '2773m', blanc: '2933m', noir: '2933m', bleu: '2600m', rouge: '2523m' }, center: [48.56390, 2.50334] },
+    { trou: 11, distances: { jaune: '266m', blanc: '277m', noir: '277m', bleu: '240m', rouge: '231m' }, center: [48.56391, 2.50335] },
+    { trou: 12, distances: { jaune: '297m', blanc: '305m', noir: '305m', bleu: '283m', rouge: '268m' }, center: [48.56392, 2.50336] },
+    { trou: 13, distances: { jaune: '454m', blanc: '475m', noir: '475m', bleu: '392m', rouge: '371m' }, center: [48.56393, 2.50337] },
+    { trou: 14, distances: { jaune: '286m', blanc: '312m', noir: '312m', bleu: '255m', rouge: '247m' }, center: [48.56394, 2.50338] },
+    { trou: 15, distances: { jaune: '154m', blanc: '166m', noir: '166m', bleu: '138m', rouge: '130m' }, center: [48.56395, 2.50339] },
+    { trou: 16, distances: { jaune: '291m', blanc: '300m', noir: '300m', bleu: '282m', rouge: '282m' }, center: [48.56396, 2.50340] },
+    { trou: 17, distances: { jaune: '365m', blanc: '379m', noir: '379m', bleu: '344m', rouge: '333m' }, center: [48.56397, 2.50341] },
+    { trou: 18, distances: { jaune: '154m', blanc: '166m', noir: '166m', bleu: '128m', rouge: '116m' }, center: [48.56398, 2.50342] }
+];
+
+    
+            addPlayerButton.addEventListener('click', () => {
+                const playerForms = document.getElementById('playerForms');
+                const playerCount = playerForms.children.length + 1;
+                const playerForm = document.createElement('div');
+                playerForm.className = 'playerForm';
+                playerForm.innerHTML = `
+                    <label for="name${playerCount}">Nom:</label>
+                    <input type="text" id="name${playerCount}" name="name${playerCount}" required>
+                    <label for="color${playerCount}">Couleur de départ:</label>
+                    <select id="color${playerCount}" name="color${playerCount}" required>
+                        <option value="jaune">Jaune</option>
+                        <option value="blanc">Blanc</option>
+                        <option value="noir">Noir</option>
+                        <option value="bleu">Bleu</option>
+                        <option value="rouge">Rouge</option>
+                    </select>
+                `;
+                playerForms.appendChild(playerForm);
+            });
+
+
+
+            registerPlayersButton.addEventListener('click', () => {
+                const playerForms = document.querySelectorAll('#playerForms .playerForm');
+                playersData = [];
+                let allValid = true; 
+
+                for (let i = 0; i < playerForms.length; i++) {
+                    const name = playerForms[i].querySelector(`input[id^='name']`).value;
+                    const color = playerForms[i].querySelector(`select[id^='color']`).value;
+
+                    if (name  && color) {
+                        playersData.push({ name,  color, scores: [] });
+                    } else {
+                        allValid = false; 
+                    }
+                }
+
+                if (!allValid) {
+                    alert('Veuillez remplir tous les champs pour chaque joueur.');
+                    return;
+                }
+
+                playerFormStep.style.display = 'none';
+                showHolePresentation();
+            });
+
+
+    
+            startHoleButton.addEventListener('click', () => {
+                holePresentationStep.style.display = 'none';
+                scoreStep.style.display = 'block';
+                currentHoleNumberEl.textContent = currentHole + 1;
+                generateScoreForms();
+            });
+    
+            nextHoleButton.addEventListener('click', () => {
+                const scoreInputs = document.querySelectorAll('#scoreForms input');
+                let allScoresEntered = true;
+    
+                playersData.forEach((player, index) => {
+                    const score = scoreInputs[index].value;
+                    if (score !== '') {
+                        player.scores.push(score);
+                    } else {
+                        allScoresEntered = false;
+                    }
+                });
+    
+                if (!allScoresEntered) {
+                    alert('Veuillez entrer un score pour chaque joueur.');
+                    return;
+                }
+    
+                currentHole++;
+                if (currentHole < totalHoles) {
+                    showModal();
+                } else {
+                    displayResults();
+                }
+            });
+    
+            closeModal.addEventListener('click', () => {
+                modal.style.display = 'none';
+                if (currentHole < totalHoles) {
+                    showHolePresentation();
+                }
+            });
+    
+            closeSatelliteModal.addEventListener('click', () => {
+                satelliteModal.style.display = 'none';
+            });
+    
+            satelliteViewButton.addEventListener('click', () => {
+                satelliteModal.style.display = 'block';
+    
+                // Initialiser la carte Leaflet dans la modale
+                const satelliteMap = L.map('satelliteMap', {
+                    center: holes[currentHole].center,
+                    zoom: 17
+                });
+    
+                L.tileLayer('https://api.tomtom.com/map/1/tile/sat/main/{z}/{x}/{y}.jpg?key=PI1Ru8ymjK0WhxPAccrLofhaq0BIb77T', {
+                    maxZoom: 19,
+                    attribution: '&copy; <a href="https://tomtom.com">TomTom</a>'
+                }).addTo(satelliteMap);
+    
+                L.marker(holes[currentHole].center).addTo(satelliteMap)
+                    .bindPopup('Trou ' + (currentHole + 1))
+                    .openPopup();
+    
+                // Ajouter la géolocalisation
+                satelliteMap.locate({ setView: true, maxZoom: 17 });
+    
+                function onLocationFound(e) {
+                    var radius = e.accuracy / 2;
+                    L.circle(e.latlng, radius).addTo(satelliteMap);
+                }
+    
+                function onLocationError(e) {
+                    alert(e.message);
+                }
+    
+                satelliteMap.on('locationfound', onLocationFound);
+                satelliteMap.on('locationerror', onLocationError);
+            });
+    
+            function generateScoreForms() {
+                scoreFormsContainer.innerHTML = '';
+                playersData.forEach(player => {
+                    const scoreForm = document.createElement('div');
+                    scoreForm.className = 'scoreForm';
+                    scoreForm.innerHTML = `
+                        <p>${player.name}</p>
+                        <input type="number" placeholder="Entrez votre score" required>
+                    `;
+                    scoreFormsContainer.appendChild(scoreForm);
+                });
+            }
+    
+            function showModal() {
+                modal.style.display = 'block';
+            }
+    
+            function showHolePresentation() {
+                
+                const hole = holes[currentHole];
+                holeNumberEl.textContent = currentHole + 1;
+
+                // Remplacer la carte Leaflet par une image de transition
+                document.getElementById('map').style.background = 'url("./image/illu.jpg") no-repeat center center';
+                document.getElementById('map').style.backgroundSize = 'cover';
+                
+
+                holeInfosEl.innerHTML = '';
+                
+                // Utiliser un Set pour éviter les doublons
+                const uniqueColors = new Set(playersData.map(player => player.color));
+
+                uniqueColors.forEach(color => {
+                    const distance = hole.distances[color];
+                    holeInfosEl.innerHTML += `<div>Distance départ ${color}: ${distance}</div>`;
+                });
+
+                scoreStep.style.display = 'none'; // Masquer la section de score
+                holePresentationStep.style.display = 'block';
+            }
+
+
+
+    
+            function displayResults() {
+                scoreStep.style.display = 'none';
+    
+                // Création de la div pour les résultats
+                const resultStep = document.createElement('div');
+                resultStep.className = 'container'; 
+                resultStep.innerHTML = '<h2>Résultats</h2>';
+    
+                playersData.forEach(player => {
+                    resultStep.innerHTML += `<div class="player-results">
+                        <p><strong>Nom: ${player.name}</strong></p>
+                        ${player.scores.map((score, index) => `<p>Score du trou ${index + 1}: ${score}</p>`).join('')}
+                    </div>`;
+                });
+    
+                // Ajouter le pad de signature
+                const signatureContainer = document.createElement('div');
+                signatureContainer.style.border = '1px solid #ddd';
+                signatureContainer.style.borderRadius = '4px';
+                signatureContainer.style.marginTop = '10px';
+                signatureContainer.style.marginBottom = '10px';
+                signatureContainer.innerHTML = `
+                    <p>Signature:</p>
+                    <canvas id="signature-pad" width="600" height="200" style="border:1px solid #000;"></canvas>
+                    <button id="clear-signature">Effacer la signature</button>
+                `;
+                resultStep.appendChild(signatureContainer);
+    
+                // Ajouter le bouton "Envoyer les résultats"
+                const sendResultsButton = document.createElement('button');
+                sendResultsButton.textContent = 'Envoyer les résultats';
+                sendResultsButton.id = 'sendResultsButton';
+                resultStep.appendChild(sendResultsButton);
+    
+                document.body.innerHTML = ''; // Vider le body pour supprimer la div container initiale
+                document.body.appendChild(resultStep);
+    
+                // Initialiser le pad de signature
+                const canvas = document.getElementById('signature-pad');
+                const signaturePad = new SignaturePad(canvas);
+    
+                document.getElementById('clear-signature').addEventListener('click', () => {
+                    signaturePad.clear();
+                });
+    
+                // Ajouter l'événement pour le bouton
+                sendResultsButton.addEventListener('click', () => sendResults(signaturePad));
+            }
+    
+            function sendResults(signaturePad) {
+                if (signaturePad.isEmpty()) {
+                    alert('Veuillez signer avant d\'envoyer les résultats.');
+                    return;
+                }
+    
+                const results = playersData.map(player => {
+                    return `Nom: ${player.name}\n${player.scores.map((score, index) => `Score du trou ${index + 1}: ${score}`).join('\n')}`;
+                }).join('\n\n');
+    
+                const playerNames = playersData.map(player => player.name).join(', ');
+    
+                const signatureDataUrl = signaturePad.toDataURL();
+    
+                // Configurez l'envoi des emails via EmailJS
+                emailjs.send('service_vkyjis8', 'template_yzyr9hy', {
+                    results: results,
+                    playerNames: playerNames,
+                    signature: signatureDataUrl
+                })
+                .then((response) => {
+                    alert('Les résultats ont été envoyés avec succès !');
+                }, (error) => {
+                    alert('Erreur lors de l\'envoi des résultats : ' + JSON.stringify(error));
+                });
+            }
+        });
+    </script>
+    
+    
+    
+</body>
+</html>
