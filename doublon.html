@@ -171,7 +171,6 @@
             <h2>Trou <span id="holeNumber"></span></h2>
             <button id="satelliteViewButton">Vue Satellite</button>
             <div id="map">
-                <!-- <img src="./image/illu.jpg" alt=""> -->
             </div>
             <div id="holeInfos"></div>
             <button id="startHoleButton">Commencer le trou</button>
@@ -196,7 +195,7 @@
         <div id="modal" class="modal">
             <div class="modal-content">
                 <span class="close" id="transitionClose">&times;</span>
-                <img src="transition.jpg" alt="Image de transition" class="modal-image">
+                <img src="./image/illu.jpg" alt="Image de transition" class="modal-image">
             </div>
         </div>
     </div>
@@ -210,10 +209,17 @@
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.2/dist/signature_pad.umd.min.js"></script>
     
-    <script>
-        (function() {
+    <script type="module">
+
+              import pub from './pub-database.js';
+              import holes from './parcours-database.js';
+
+       
+              (function() {
             emailjs.init("bNLINAH9U9QfeBPG3");
         })();
+
+  
     
         document.addEventListener('DOMContentLoaded', () => {
             const addPlayerButton = document.getElementById('addPlayerButton');
@@ -236,28 +242,8 @@
     
             const satelliteViewButton = document.getElementById('satelliteViewButton');
             let playersData = [];
-        let currentHole = 0;
-        const totalHoles = 18; 
-        const holes = [
-    { trou: 1, distances: { jaune: '347m', blanc: '358m', noir: '326m', bleu: '297m', rouge: '272m' }, center: [48.56381, 2.50325] },
-    { trou: 2, distances: { jaune: '319m', blanc: '330m', noir: '310m', bleu: '304m', rouge: '290m' }, center: [48.56382, 2.50326] },
-    { trou: 3, distances: { jaune: '120m', blanc: '134m', noir: '134m', bleu: '111m', rouge: '104m' }, center: [48.56383, 2.50327] },
-    { trou: 4, distances: { jaune: '433m', blanc: '444m', noir: '444m', bleu: '424m', rouge: '416m' }, center: [48.56384, 2.50328] },
-    { trou: 5, distances: { jaune: '377m', blanc: '398m', noir: '398m', bleu: '342m', rouge: '342m' }, center: [48.56385, 2.50329] },
-    { trou: 6, distances: { jaune: '274m', blanc: '290m', noir: '290m', bleu: '246m', rouge: '240m' }, center: [48.56386, 2.50330] },
-    { trou: 7, distances: { jaune: '304m', blanc: '315m', noir: '315m', bleu: '286m', rouge: '277m' }, center: [48.56387, 2.50331] },
-    { trou: 8, distances: { jaune: '442m', blanc: '498m', noir: '498m', bleu: '405m', rouge: '399m' }, center: [48.56388, 2.50332] },
-    { trou: 9, distances: { jaune: '157m', blanc: '166m', noir: '166m', bleu: '150m', rouge: '144m' }, center: [48.56389, 2.50333] },
-    { trou: 10, distances: { jaune: '2773m', blanc: '2933m', noir: '2933m', bleu: '2600m', rouge: '2523m' }, center: [48.56390, 2.50334] },
-    { trou: 11, distances: { jaune: '266m', blanc: '277m', noir: '277m', bleu: '240m', rouge: '231m' }, center: [48.56391, 2.50335] },
-    { trou: 12, distances: { jaune: '297m', blanc: '305m', noir: '305m', bleu: '283m', rouge: '268m' }, center: [48.56392, 2.50336] },
-    { trou: 13, distances: { jaune: '454m', blanc: '475m', noir: '475m', bleu: '392m', rouge: '371m' }, center: [48.56393, 2.50337] },
-    { trou: 14, distances: { jaune: '286m', blanc: '312m', noir: '312m', bleu: '255m', rouge: '247m' }, center: [48.56394, 2.50338] },
-    { trou: 15, distances: { jaune: '154m', blanc: '166m', noir: '166m', bleu: '138m', rouge: '130m' }, center: [48.56395, 2.50339] },
-    { trou: 16, distances: { jaune: '291m', blanc: '300m', noir: '300m', bleu: '282m', rouge: '282m' }, center: [48.56396, 2.50340] },
-    { trou: 17, distances: { jaune: '365m', blanc: '379m', noir: '379m', bleu: '344m', rouge: '333m' }, center: [48.56397, 2.50341] },
-    { trou: 18, distances: { jaune: '154m', blanc: '166m', noir: '166m', bleu: '128m', rouge: '116m' }, center: [48.56398, 2.50342] }
-];
+            let currentHole = 0;
+            const totalHoles = 3; 
 
     
             addPlayerButton.addEventListener('click', () => {
@@ -348,6 +334,8 @@
                     showHolePresentation();
                 }
             });
+
+         
     
             closeSatelliteModal.addEventListener('click', () => {
                 satelliteModal.style.display = 'none';
@@ -356,7 +344,7 @@
             satelliteViewButton.addEventListener('click', () => {
                 satelliteModal.style.display = 'block';
     
-                // Initialiser la carte Leaflet dans la modale
+                
                 const satelliteMap = L.map('satelliteMap', {
                     center: holes[currentHole].center,
                     zoom: 17
@@ -386,7 +374,7 @@
                 satelliteMap.on('locationfound', onLocationFound);
                 satelliteMap.on('locationerror', onLocationError);
             });
-    
+
             function generateScoreForms() {
                 scoreFormsContainer.innerHTML = '';
                 playersData.forEach(player => {
@@ -401,21 +389,23 @@
             }
     
             function showModal() {
+                const modalImage = document.querySelector('.modal-image');
+                modalImage.src = pub[currentHole];
                 modal.style.display = 'block';
             }
+
     
             function showHolePresentation() {
-                
                 const hole = holes[currentHole];
                 holeNumberEl.textContent = currentHole + 1;
 
-                // Remplacer la carte Leaflet par une image de transition
-                document.getElementById('map').style.background = 'url("./image/illu.jpg") no-repeat center center';
+                // Remplacer la carte Leaflet par l'image spécifique du trou
+                document.getElementById('map').style.background = `url("${hole.image}") no-repeat center center`;
                 document.getElementById('map').style.backgroundSize = 'cover';
-                
 
-                holeInfosEl.innerHTML = '';
-                
+                // Afficher le par du trou
+                holeInfosEl.innerHTML = `<div>Par ${hole.par}</div>`;
+
                 // Utiliser un Set pour éviter les doublons
                 const uniqueColors = new Set(playersData.map(player => player.color));
 
@@ -427,6 +417,7 @@
                 scoreStep.style.display = 'none'; // Masquer la section de score
                 holePresentationStep.style.display = 'block';
             }
+
 
 
 
